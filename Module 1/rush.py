@@ -103,9 +103,8 @@ def paintboard(board, iteration):
             x = x + deltax
             y = y + deltay
     text = "Iteration #"+ str(iteration)
-    font = ImageFont.truetype("arial.ttf", 20)
-    draw.text((10, 310), text,(0,0,0), font=font)
-    im.show()
+    draw.text((10, 310), text,(0,0,0))
+    im.save("/home/espen/Desktop/output/" + str(iteration) + ".png")
 
 #Calculate the coordinates occupied by a given car
 def get_car_coords(car):
@@ -245,6 +244,6 @@ def astar(board, display):
     return False
 
 
-paintboard(BOARD_5, 0)
+
 #print astar(BOARD_3, False)
-cProfile.run('astar(BOARD_1, True)')    #run the astar() function with profiling tools
+cProfile.run('astar(BOARD_5, True)')    #run the astar() function with profiling tools
