@@ -105,7 +105,7 @@ def paintboard(board, iteration):
             y = y + deltay
     text = "Iteration #"+ str(iteration)
     draw.text((10, 310), text,(0,0,0))
-    im.save("/home/espen/Desktop/output/" + str(iteration) + ".png")
+    im.save("output/" + str(iteration) + ".png")
 
 #Calculate the coordinates occupied by a given car
 def get_car_coords(car):
@@ -124,6 +124,23 @@ def get_car_coords(car):
         y = y + deltay
     return coords
 
+
+
+def isStuck(car, board):
+    return calculate_options(car, board) == 0
+
+def getBlockingCar(x,y, board):
+    for car in board:
+        if (x,y) in get_car_coords(car):
+            return car
+
+def blockScore(x, y, board):
+    if not is_blocked(x,y,board):
+        return 0
+    blockingCar = getBlockingCar(x,y, board)
+    if isStuck(blockingCar, board):
+        return 3
+    return 1
 
 
 #Checks if a certain coordinate is occupied by a car
@@ -189,7 +206,7 @@ def get_best_board(open_set, cost):
     bestcost = float("inf")
     bestboard = None
     for board in open_set:
-        if cost[hash_board(board)] + h(board)  < bestcost:
+        if cost[hash_board(board)] + h(board) < bestcost:
             bestboard = board
             bestcost = cost[hash_board(board)] + h(board)
     return bestboard
@@ -214,14 +231,11 @@ def backtrack(node, parent, display):
             paintboard(board, counter)
             counter = counter + 1
 
-
-
-
-
 #Generic A* code
 def astar(board, display):
-    closed_set = set()
-    open_set = [board]
+    closed_set = set() # visited boards
+    open_set = [board] # unvisited
+    # parent and costs maps with the hashed boards
     parent = {}
     cost = {hash_board(board): 0}
     counter = 0
