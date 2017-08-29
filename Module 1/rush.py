@@ -104,7 +104,7 @@ def paintboard(board, iteration):
             y = y + deltay
     text = "Iteration #"+ str(iteration)
     draw.text((10, 310), text,(0,0,0))
-    im.save("/home/espen/Desktop/output/" + str(iteration) + ".png")
+    im.save("output/" + str(iteration) + ".png")
 
 #Calculate the coordinates occupied by a given car
 def get_car_coords(car):
@@ -123,6 +123,23 @@ def get_car_coords(car):
         y = y + deltay
     return coords
 
+
+
+def isStuck(car, board):
+    return calculate_options(car, board) == 0
+
+def getBlockingCar(x,y, board):
+    for car in board:
+        if (x,y) in get_car_coords(car):
+            return car
+
+def blockScore(x, y, board):
+    if not is_blocked(x,y,board):
+        return 0
+    blockingCar = getBlockingCar(x,y, board)
+    if isStuck(blockingCar, board):
+        return 3
+    return 1
 
 
 #Checks if a certain coordinate is occupied by a car
@@ -173,27 +190,27 @@ def is_won(board):
 #Our best attempt at a heuristic function. Turns out, its not good...
 def h(board):
     n = 0
-    n = n + 5 - board[0][1]+1       #how many moves to get red car to goal
     for i in range(board[0][1]+2, 6):   #how many of those are blocked?
-        if is_blocked(i, 2, board):
-            n = n + 1
-    return n
+        n = n + blockScore(i, 2, board)
+    return 0
 
 
+# TODO: debug
 #Iterates through the open set and returns the best board in it
 def get_best_board(open_set, cost):
     bestcost = float("inf")
     bestboard = None
     for board in open_set:
-        if cost[hash_board(board)] + h(board)  < bestcost:
+        if cost[hash_board(board)] + h(board) < bestcost:
             bestboard = board
-            bestcost = cost[hash_board(board)]
+            bestcost = cost[hash_board(board)] + h(board)
     return bestboard
 
 #Python cannot hash lists, so to be able to use them as keys in dictionaries
 #we created a custom hash function
 def hash_board(board):
-    return tuple(sum(board, []))
+    boardHash = tuple(sum(board, []))
+    return boardHash
 
 #Create a history of boards to reach the current board. Used to visualize the process
 #Can calculate how many moves to reach goal, as well display all steps
@@ -210,14 +227,11 @@ def backtrack(node, parent, display):
             paintboard(board, counter)
             counter = counter + 1
 
-
-
-
-
 #Generic A* code
 def astar(board, display):
-    closed_set = []
-    open_set = [board]
+    closed_set = set() # visited boards
+    open_set = [board] # unvisited
+    # parent and costs maps with the hashed boards
     parent = {}
     cost = {hash_board(board): 0}
     counter = 0
@@ -229,9 +243,9 @@ def astar(board, display):
             backtrack(current, parent, display)
             return True
         open_set.remove(current)
-        closed_set.append(current)
+        closed_set.add(hash_board(current))
         for neighbour in get_neighbours(current):
-            if neighbour in closed_set:
+            if hash_board(neighbour) in closed_set:
                 continue
             tentative_score = cost[hash_board(current)] + 1
             if neighbour not in open_set:
@@ -245,5 +259,5 @@ def astar(board, display):
 
 
 
-#print astar(BOARD_3, False)
-cProfile.run('astar(BOARD_5, True)')    #run the astar() function with profiling tools
+print astar(BOARD_2, True)
+#cProfile.run('astar(BOARD_1, True)')    #run the astar() function with profiling tools
