@@ -1,6 +1,7 @@
 from PIL import Image, ImageDraw, ImageFont
 from copy import copy, deepcopy
 import cProfile
+import sys
 
 
 BOARD_1 = [
@@ -173,11 +174,14 @@ def is_won(board):
 #Our best attempt at a heuristic function. Turns out, its not good...
 def h(board):
     n = 0
-    n = n + 5 - board[0][1]+1       #how many moves to get red car to goal
     for i in range(board[0][1]+2, 6):   #how many of those are blocked?
         if is_blocked(i, 2, board):
             n = n + 1
-    return n
+    return n + get_dist_to_exit(board)
+
+def get_dist_to_exit(board):
+    return 0# 4 - board[0][1]
+
 
 
 #Iterates through the open set and returns the best board in it
@@ -187,13 +191,13 @@ def get_best_board(open_set, cost):
     for board in open_set:
         if cost[hash_board(board)] + h(board)  < bestcost:
             bestboard = board
-            bestcost = cost[hash_board(board)]
+            bestcost = cost[hash_board(board)] + h(board)
     return bestboard
 
 #Python cannot hash lists, so to be able to use them as keys in dictionaries
 #we created a custom hash function
 def hash_board(board):
-    return tuple(sum(board, []))
+    return ', '.join(str(x) for x in sum(board, []))
 
 #Create a history of boards to reach the current board. Used to visualize the process
 #Can calculate how many moves to reach goal, as well display all steps
@@ -216,7 +220,7 @@ def backtrack(node, parent, display):
 
 #Generic A* code
 def astar(board, display):
-    closed_set = []
+    closed_set = set()
     open_set = [board]
     parent = {}
     cost = {hash_board(board): 0}
@@ -225,25 +229,59 @@ def astar(board, display):
         counter = counter +1
         current = get_best_board(open_set, cost)
         if is_won(current):
+            print "Open set: " + str(len(open_set))
+            print "Closed set: " + str(len(closed_set))
+            print "Total number of nodes: " + str(len(open_set) + len(closed_set))
             print "Used", counter, "iterations to compute result"
             backtrack(current, parent, display)
             return True
         open_set.remove(current)
-        closed_set.append(current)
+        closed_set.add(hash_board(current))
         for neighbour in get_neighbours(current):
-            if neighbour in closed_set:
+            if hash_board(neighbour) in closed_set:
                 continue
-            tentative_score = cost[hash_board(current)] + 1
+
             if neighbour not in open_set:
                 open_set.append(neighbour)
-            elif tentative_score >= cost[hash_board(neighbour)]:
+            tentative_score = cost[hash_board(current)] + 1
+            if tentative_score >= cost.get(hash_board(neighbour), float("inf")):
                 continue
             parent[hash_board(neighbour)] = current
             cost[hash_board(neighbour)] = tentative_score
 
     return False
 
+def dfs(board, display):
+    closed_set = []
+    open_set = [board]
+    parent = {}
+    counter = 0
+    while open_set:
+        counter = counter + 1
+        current = open_set.pop()
+        closed_set.append(current)
+        if is_won(current):
+            print "Open set: " + str(len(open_set))
+            print "Closed set: " + str(len(closed_set))
+            print "Total number of nodes: " + str(len(open_set) + len(closed_set))
+            print "Used", counter, "iterations to compute result"
+            backtrack(current, parent, display)
+            return True
+        for neighbour in get_neighbours(current):
+            if neighbour in closed_set or neighbour in open_set:
+                continue
+            open_set.append(neighbour)
+            parent[hash_board(neighbour)] = current
+
+    return False
 
 
-#print astar(BOARD_3, False)
-cProfile.run('astar(BOARD_5, True)')    #run the astar() function with profiling tools
+
+board = []
+for line in sys.stdin:
+    data = line.split(",")
+    board.append([int(data[0]), int(data[1]), int(data[2]), int(data[3])])
+
+astar(board, True)
+#dfs(board, True)
+#cProfile.run('astar(BOARD_1, True)')    #run the astar() function with profiling tools
