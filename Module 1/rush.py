@@ -2,80 +2,7 @@ from PIL import Image, ImageDraw, ImageFont
 from copy import copy, deepcopy
 import cProfile
 import sys
-
-
-BOARD_1 = [
-    [0,2,2,2],
-    [0,0,4,3],
-    [0,3,4,2],
-    [0,4,1,2],
-    [1,2,0,2],
-    [1,4,2,2]
-]
-
-BOARD_2 = [
-    [0,1,2,2],
-    [0,0,5,3],
-    [0,1,3,2],
-    [0,3,0,2],
-    [1,0,2,3],
-    [1,2,0,2],
-    [1,3,1,2],
-    [1,3,3,3],
-    [1,4,2,2],
-    [1,5,0,2],
-    [1,5,2,2]
-]
-
-BOARD_3 = [
-    [0,2,2,2],
-    [0,0,4,2],
-    [0,0,5,2],
-    [0,2,5,2],
-    [0,4,0,2],
-    [1,0,0,3],
-    [1,1,1,3],
-    [1,2,0,2],
-    [1,3,0,2],
-    [1,4,2,2],
-    [1,4,4,2],
-    [1,5,3,3]
-]
-
-BOARD_4 = [
-    [0,0,2,2],
-    [0,0,1,3],
-    [0,0,5,2],
-    [0,1,0,2],
-    [0,2,3,2],
-    [0,3,4,2],
-    [1,0,3,2],
-    [1,2,4,2],
-    [1,3,0,3],
-    [1,4,0,2],
-    [1,4,2,2],
-    [1,5,2,2],
-    [1,5,4,2]
-]
-
-BOARD_5 = [
-    [0,2,2,2],  #red
-    [1,0,1,2],  #1
-    [1,1,4,2],  #2
-    [1,2,3,2],  #3
-    [1,3,0,2],  #4
-    [1,4,0,3],  #5
-    [1,5,0,3],  #6
-    [0,0,0,3],  #13
-    [0,1,1,2],  #14
-    [0,0,3,2],  #16
-    [0,4,4,2],  #17
-    [0,2,5,2],  #18
-    [0,4,5,2]
-]
-
-
-
+import os, shutil
 
 #Use pillow to paint a board with some text and a number
 def paintboard(board, iteration):
@@ -107,6 +34,17 @@ def paintboard(board, iteration):
     draw.text((10, 310), text,(0,0,0))
     im.save("output/" + str(iteration) + ".png")
 
+#Deletes the output of previous run
+def delete_previous_output():
+    folder = 'output'
+    for img in os.listdir(folder):
+        img_path = os.path.join(folder, img)
+        try:
+            if os.path.isfile(img_path):
+                os.unlink(img_path)
+        except Exception as e:
+            print(e)
+
 #Calculate the coordinates occupied by a given car
 def get_car_coords(car):
     coords = []
@@ -125,21 +63,25 @@ def get_car_coords(car):
     return coords
 
 
-
+#Returnes wether the car is stuck or not
 def isStuck(car, board):
     return calculate_options(car, board) == 0
 
+#Returnes the car that is blocking the coordinate
 def getBlockingCar(x,y, board):
     for car in board:
         if (x,y) in get_car_coords(car):
             return car
 
+#Returnes 0 if the coordinate is not blocked
+#1 if it is blocked or
+#2 if it is blocked and the blocking car is stuck
 def blockScore(x, y, board):
     if not is_blocked(x,y,board):
         return 0
     blockingCar = getBlockingCar(x,y, board)
     if isStuck(blockingCar, board):
-        return 3
+        return 2
     return 1
 
 
@@ -200,8 +142,6 @@ def get_dist_to_exit(board):
     return 0# 4 - board[0][1]
 
 
-
-# TODO: debug
 #Iterates through the open set and returns the best board in it
 def get_best_board(open_set, cost):
     bestcost = float("inf")
