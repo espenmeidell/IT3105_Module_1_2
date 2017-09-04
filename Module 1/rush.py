@@ -136,21 +136,21 @@ def h(board):
     for i in range(board[0][1]+2, 6):   #how many of those are blocked?
         if is_blocked(i, 2, board):
             n = n + 1
-    return n + get_dist_to_exit(board)
+    return  n + get_dist_to_exit(board)
 
 def get_dist_to_exit(board):
-    return 0# 4 - board[0][1]
+    return  4 - board[0][1]
 
 
 
 #Iterates through the open set and returns the best board in it
-def get_best_board(open_set, cost):
+def get_best_board(open_set, cost, heuristic):
     bestcost = float("inf")
     bestboard = None
     for board in open_set:
-        if cost[hash_board(board)] + h(board) < bestcost:
+        if cost[hash_board(board)] + heuristic(board) < bestcost:
             bestboard = board
-            bestcost = cost[hash_board(board)] + h(board)
+            bestcost = cost[hash_board(board)] + heuristic(board)
     return bestboard
 
 #Python cannot hash lists, so to be able to use them as keys in dictionaries
@@ -174,7 +174,7 @@ def backtrack(node, parent, display):
             counter = counter + 1
 
 #Generic A* code
-def astar(board, display):
+def astar(board, display, heuristic):
     closed_set = set() # visited boards
     open_set = [board] # unvisited
     # parent and costs maps with the hashed boards
@@ -183,7 +183,7 @@ def astar(board, display):
     counter = 0
     while open_set:
         counter = counter +1
-        current = get_best_board(open_set, cost)
+        current = get_best_board(open_set, cost, heuristic)
         if is_won(current):
             print "Open set: " + str(len(open_set))
             print "Closed set: " + str(len(closed_set))
@@ -239,6 +239,6 @@ for line in sys.stdin:
     board.append([int(data[0]), int(data[1]), int(data[2]), int(data[3])])
 
 delete_previous_output()
-astar(board, True)
+astar(board, True, h)
 #dfs(board, True)
 #cProfile.run('astar(BOARD_1, True)')    #run the astar() function with profiling tools
