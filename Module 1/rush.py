@@ -131,16 +131,22 @@ def is_won(board):
     return board[0][1] + board[0][3] -1 == 5
 
 #Our best attempt at a heuristic function. Turns out, its not good...
-def h(board):
+def simple_blocking_and_manhattan(board):
+    return  simple_blocking(board) + manhattan(board)
+
+def simple_blocking(board):
     n = 0
     for i in range(board[0][1]+2, 6):   #how many of those are blocked?
         if is_blocked(i, 2, board):
             n = n + 1
-    return  n + get_dist_to_exit(board)
+    return  n
 
-def get_dist_to_exit(board):
+def manhattan(board):
     return  4 - board[0][1]
 
+
+def zero_heuristic(board):
+    return 0
 
 
 #Iterates through the open set and returns the best board in it
@@ -166,7 +172,7 @@ def backtrack(node, parent, display):
         history.append(node)
         node = parent[hash_board(node)]
     history.reverse()
-    print "Optimal game:", len(history), "moves"
+    print "Solution Found:", len(history), "moves"
     if display:
         counter = 1
         for board in history:
@@ -185,11 +191,14 @@ def astar(board, display, heuristic):
         counter = counter +1
         current = get_best_board(open_set, cost, heuristic)
         if is_won(current):
+            print "-"*80
+            print "Heuristic: " + heuristic.__name__
             print "Open set: " + str(len(open_set))
             print "Closed set: " + str(len(closed_set))
             print "Total number of nodes: " + str(len(open_set) + len(closed_set))
             print "Used", counter, "iterations to compute result"
             backtrack(current, parent, display)
+            print "-"*80
             return True
         open_set.remove(current)
         closed_set.add(hash_board(current))
@@ -239,6 +248,6 @@ for line in sys.stdin:
     board.append([int(data[0]), int(data[1]), int(data[2]), int(data[3])])
 
 delete_previous_output()
-astar(board, True, h)
+astar(board, True, simple_blocking_and_manhattan)
 #dfs(board, True)
 #cProfile.run('astar(BOARD_1, True)')    #run the astar() function with profiling tools
