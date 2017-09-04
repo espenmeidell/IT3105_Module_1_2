@@ -142,6 +142,7 @@ def get_dist_to_exit(board):
     return 0# 4 - board[0][1]
 
 
+
 #Iterates through the open set and returns the best board in it
 def get_best_board(open_set, cost):
     bestcost = float("inf")
@@ -237,6 +238,7 @@ for line in sys.stdin:
     data = line.split(",")
     board.append([int(data[0]), int(data[1]), int(data[2]), int(data[3])])
 
+delete_previous_output()
 astar(board, True)
 #dfs(board, True)
 #cProfile.run('astar(BOARD_1, True)')    #run the astar() function with profiling tools
