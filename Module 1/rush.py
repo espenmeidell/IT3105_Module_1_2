@@ -74,16 +74,7 @@ def getBlockingCar(x,y, board):
         if (x,y) in get_car_coords(car):
             return car
 
-#Returnes 0 if the coordinate is not blocked
-#1 if it is blocked or
-#2 if it is blocked and the blocking car is stuck
-def blockScore(x, y, board):
-    if not is_blocked(x,y,board):
-        return 0
-    blockingCar = getBlockingCar(x,y, board)
-    if isStuck(blockingCar, board):
-        return 2
-    return 1
+
 
 
 #Checks if a certain coordinate is occupied by a car
@@ -135,6 +126,17 @@ def is_won(board):
 #
 #       HEURISTICS
 #
+
+#Returnes 0 if the coordinate is not blocked
+#1 if it is blocked or
+#2 if it is blocked and the blocking car is stuck
+def advanced_block_score(x, y, board):
+    if not is_blocked(x,y,board):
+        return 0
+    blockingCar = getBlockingCar(x,y, board)
+    if isStuck(blockingCar, board):
+        return 2
+    return 1
 
 def simple_blocking_and_manhattan(board):
     return  simple_blocking(board) + manhattan(board)
