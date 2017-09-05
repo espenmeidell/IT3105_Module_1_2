@@ -4,6 +4,7 @@ import cProfile
 import sys
 import os, shutil
 
+
 #Use pillow to paint a board with some text and a number
 def paintboard(board, iteration):
     im = Image.new("RGB", (6*50, 7*50), "white")
@@ -130,7 +131,11 @@ def get_neighbours(board):
 def is_won(board):
     return board[0][1] + board[0][3] -1 == 5
 
-#Our best attempt at a heuristic function. Turns out, its not good...
+
+#
+#       HEURISTICS
+#
+
 def simple_blocking_and_manhattan(board):
     return  simple_blocking(board) + manhattan(board)
 
@@ -192,11 +197,11 @@ def astar(board, display, heuristic):
         current = get_best_board(open_set, cost, heuristic)
         if is_won(current):
             print "-"*80
-            print "Heuristic: " + heuristic.__name__
-            print "Open set: " + str(len(open_set))
-            print "Closed set: " + str(len(closed_set))
-            print "Total number of nodes: " + str(len(open_set) + len(closed_set))
-            print "Used", counter, "iterations to compute result"
+            print "Heuristic:      " + heuristic.__name__
+            print "Open set:       " + str(len(open_set))
+            print "Closed set:     " + str(len(closed_set))
+            print "Total nodes:    " + str(len(open_set) + len(closed_set))
+            print "Iterations:     " + str(counter)
             backtrack(current, parent, display)
             print "-"*80
             return True
@@ -248,6 +253,11 @@ for line in sys.stdin:
     board.append([int(data[0]), int(data[1]), int(data[2]), int(data[3])])
 
 delete_previous_output()
-astar(board, True, simple_blocking_and_manhattan)
+astar(board, False, zero_heuristic)
+astar(board, False, simple_blocking)
+astar(board, False, manhattan)
+astar(board, False, simple_blocking_and_manhattan)
+
 #dfs(board, True)
-#cProfile.run('astar(BOARD_1, True)')    #run the astar() function with profiling tools
+#cProfile.run('astar(board, False, zero_heuristic)')    #run the astar() function with profiling tools
+#cProfile.run('astar(board, False, simple_blocking_and_manhattan)')
