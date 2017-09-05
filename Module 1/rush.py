@@ -195,16 +195,13 @@ def astar(board, display, heuristic):
     # parent and costs maps with the hashed boards
     parent = {}
     cost = {hash_board(board): 0}
-    counter = 0
     while open_set:
-        counter = counter +1
         current = get_best_board(open_set, cost, heuristic)
         if is_won(current):
             print "-"*80
             print "Heuristic:      " + heuristic.__name__
             print "Elapsed time:   " + str(round((time.time() * 1000) - started)) + " ms"
             print "Total nodes:    " + str(len(open_set) + len(closed_set))
-            print "Iterations:     " + str(counter)
             backtrack(current, parent, display)
             print "-"*80
             return True
