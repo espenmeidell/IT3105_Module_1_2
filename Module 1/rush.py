@@ -131,25 +131,32 @@ def is_won(board):
     return board[0][1] + board[0][3] -1 == 5
 
 #Our best attempt at a heuristic function. Turns out, its not good...
-def h(board):
+def simple_blocking_and_manhattan(board):
+    return  simple_blocking(board) + manhattan(board)
+
+def simple_blocking(board):
     n = 0
     for i in range(board[0][1]+2, 6):   #how many of those are blocked?
-        n = n + advanced_block_score(i, 2, board)
-    return n + get_dist_to_exit(board)
+        if is_blocked(i, 2, board):
+            n = n + 1
+    return  n
 
-def get_dist_to_exit(board):
-    return 0# 4 - board[0][1]
+def manhattan(board):
+    return  4 - board[0][1]
 
+
+def zero_heuristic(board):
+    return 0
 
 
 #Iterates through the open set and returns the best board in it
-def get_best_board(open_set, cost):
+def get_best_board(open_set, cost, heuristic):
     bestcost = float("inf")
     bestboard = None
     for board in open_set:
-        if cost[hash_board(board)] + h(board) < bestcost:
+        if cost[hash_board(board)] + heuristic(board) < bestcost:
             bestboard = board
-            bestcost = cost[hash_board(board)] + h(board)
+            bestcost = cost[hash_board(board)] + heuristic(board)
     return bestboard
 
 #Python cannot hash lists, so to be able to use them as keys in dictionaries
@@ -165,7 +172,7 @@ def backtrack(node, parent, display):
         history.append(node)
         node = parent[hash_board(node)]
     history.reverse()
-    print "Optimal game:", len(history), "moves"
+    print "Solution Found:", len(history), "moves"
     if display:
         counter = 1
         for board in history:
@@ -173,7 +180,7 @@ def backtrack(node, parent, display):
             counter = counter + 1
 
 #Generic A* code
-def astar(board, display):
+def astar(board, display, heuristic):
     closed_set = set() # visited boards
     open_set = [board] # unvisited
     # parent and costs maps with the hashed boards
@@ -182,13 +189,16 @@ def astar(board, display):
     counter = 0
     while open_set:
         counter = counter +1
-        current = get_best_board(open_set, cost)
+        current = get_best_board(open_set, cost, heuristic)
         if is_won(current):
+            print "-"*80
+            print "Heuristic: " + heuristic.__name__
             print "Open set: " + str(len(open_set))
             print "Closed set: " + str(len(closed_set))
             print "Total number of nodes: " + str(len(open_set) + len(closed_set))
             print "Used", counter, "iterations to compute result"
             backtrack(current, parent, display)
+            print "-"*80
             return True
         open_set.remove(current)
         closed_set.add(hash_board(current))
@@ -238,10 +248,14 @@ for line in sys.stdin:
     board.append([int(data[0]), int(data[1]), int(data[2]), int(data[3])])
 
 delete_previous_output()
+<<<<<<< HEAD
 #print("-----DFS------")
 #dfs(board, False)
 print("")
 print("------A*------")
 astar(board, True)
+=======
+astar(board, True, simple_blocking_and_manhattan)
+>>>>>>> f7ade81fbfadf46aa6e50c84499520c8e1c3e3dd
 #dfs(board, True)
 #cProfile.run('astar(BOARD_1, True)')    #run the astar() function with profiling tools
