@@ -3,6 +3,8 @@ from copy import copy, deepcopy
 import cProfile
 import sys
 import os, shutil
+import time
+
 
 #Use pillow to paint a board with some text and a number
 def paintboard(board, iteration):
@@ -73,16 +75,7 @@ def getBlockingCar(x,y, board):
         if (x,y) in get_car_coords(car):
             return car
 
-#Returnes 0 if the coordinate is not blocked
-#1 if it is blocked or
-#2 if it is blocked and the blocking car is stuck
-def advanced_block_score(x, y, board):
-    if not is_blocked(x,y,board):
-        return 0
-    blockingCar = getBlockingCar(x,y, board)
-    if isStuck(blockingCar, board):
-        return 2
-    return 1
+
 
 
 #Checks if a certain coordinate is occupied by a car
@@ -130,7 +123,22 @@ def get_neighbours(board):
 def is_won(board):
     return board[0][1] + board[0][3] -1 == 5
 
-#Our best attempt at a heuristic function. Turns out, its not good...
+
+#
+#       HEURISTICS
+#
+
+#Returnes 0 if the coordinate is not blocked
+#1 if it is blocked or
+#2 if it is blocked and the blocking car is stuck
+def advanced_block_score(x, y, board):
+    if not is_blocked(x,y,board):
+        return 0
+    blockingCar = getBlockingCar(x,y, board)
+    if isStuck(blockingCar, board):
+        return 2
+    return 1
+
 def simple_blocking_and_manhattan(board):
     return  simple_blocking(board) + manhattan(board)
 
@@ -181,22 +189,19 @@ def backtrack(node, parent, display):
 
 #Generic A* code
 def astar(board, display, heuristic):
+    started = time.time()*1000
     closed_set = set() # visited boards
     open_set = [board] # unvisited
     # parent and costs maps with the hashed boards
     parent = {}
     cost = {hash_board(board): 0}
-    counter = 0
     while open_set:
-        counter = counter +1
         current = get_best_board(open_set, cost, heuristic)
         if is_won(current):
             print "-"*80
-            print "Heuristic: " + heuristic.__name__
-            print "Open set: " + str(len(open_set))
-            print "Closed set: " + str(len(closed_set))
-            print "Total number of nodes: " + str(len(open_set) + len(closed_set))
-            print "Used", counter, "iterations to compute result"
+            print "Heuristic:      " + heuristic.__name__
+            print "Elapsed time:   " + str(round((time.time() * 1000) - started)) + " ms"
+            print "Total nodes:    " + str(len(open_set) + len(closed_set))
             backtrack(current, parent, display)
             print "-"*80
             return True
@@ -216,39 +221,16 @@ def astar(board, display, heuristic):
 
     return False
 
-def dfs(board, display):
-    closed_set = []
-    open_set = [board]
-    parent = {}
-    counter = 0
-    while open_set:
-        counter = counter + 1
-        current = open_set.pop()
-        closed_set.append(current)
-        if is_won(current):
-            print "Open set: " + str(len(open_set))
-            print "Closed set: " + str(len(closed_set))
-            print "Total number of nodes: " + str(len(open_set) + len(closed_set))
-            print "Used", counter, "iterations to compute result"
-            backtrack(current, parent, display)
-            return True
-        for neighbour in get_neighbours(current):
-            if neighbour in closed_set or neighbour in open_set:
-                continue
-            open_set.append(neighbour)
-            parent[hash_board(neighbour)] = current
-
-    return False
-
-
-
 board = []
 for line in sys.stdin:
     data = line.split(",")
     board.append([int(data[0]), int(data[1]), int(data[2]), int(data[3])])
 
 delete_previous_output()
+astar(board, False, zero_heuristic)
+astar(board, False, simple_blocking)
+astar(board, False, manhattan)
+astar(board, False, simple_blocking_and_manhattan)
 
-astar(board, True, simple_blocking_and_manhattan)
-#dfs(board, True)
-#cProfile.run('astar(BOARD_1, True)')    #run the astar() function with profiling tools
+# cProfile.run('astar(board, False, zero_heuristic)')    #run the astar() function with profiling tools
+# cProfile.run('astar(board, False, simple_blocking_and_manhattan)')
