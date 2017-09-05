@@ -248,14 +248,7 @@ for line in sys.stdin:
     board.append([int(data[0]), int(data[1]), int(data[2]), int(data[3])])
 
 delete_previous_output()
-<<<<<<< HEAD
-#print("-----DFS------")
-#dfs(board, False)
-print("")
-print("------A*------")
-astar(board, True)
-=======
+
 astar(board, True, simple_blocking_and_manhattan)
->>>>>>> f7ade81fbfadf46aa6e50c84499520c8e1c3e3dd
 #dfs(board, True)
 #cProfile.run('astar(BOARD_1, True)')    #run the astar() function with profiling tools
