@@ -76,7 +76,7 @@ def getBlockingCar(x,y, board):
 #Returnes 0 if the coordinate is not blocked
 #1 if it is blocked or
 #2 if it is blocked and the blocking car is stuck
-def blockScore(x, y, board):
+def advanced_block_score(x, y, board):
     if not is_blocked(x,y,board):
         return 0
     blockingCar = getBlockingCar(x,y, board)
@@ -134,8 +134,7 @@ def is_won(board):
 def h(board):
     n = 0
     for i in range(board[0][1]+2, 6):   #how many of those are blocked?
-        if is_blocked(i, 2, board):
-            n = n + 1
+        n = n + advanced_block_score(i, 2, board)
     return n + get_dist_to_exit(board)
 
 def get_dist_to_exit(board):
@@ -239,6 +238,10 @@ for line in sys.stdin:
     board.append([int(data[0]), int(data[1]), int(data[2]), int(data[3])])
 
 delete_previous_output()
+#print("-----DFS------")
+#dfs(board, False)
+print("")
+print("------A*------")
 astar(board, True)
 #dfs(board, True)
 #cProfile.run('astar(BOARD_1, True)')    #run the astar() function with profiling tools

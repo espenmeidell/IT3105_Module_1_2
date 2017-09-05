@@ -164,4 +164,6 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
+output
+
 # End of https://www.gitignore.io/api/linux,macos,python,windows
