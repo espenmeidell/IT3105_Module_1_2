@@ -225,8 +225,10 @@ def astar(board, display, heuristic):
         current = get_best_board(open_set, cost, heuristic)
         if is_won(current):
             print "-"*80
-            print "Heuristic:      " + heuristic.__name__
+            print "Heuristic:      " + heuristic.__name__.replace("_"," ").title()
             print "Elapsed time:   " + str(round((time.time() * 1000) - started)) + " ms"
+            print "Open nodes:     " + str(len(open_set))
+            print "Closed nodes:   " + str(len(closed_set))
             print "Total nodes:    " + str(len(open_set) + len(closed_set))
             backtrack(current, parent, display)
             print "-"*80
