@@ -6,6 +6,11 @@ import os, shutil
 import time
 
 
+
+# --------------------------------
+# ------------- GUI --------------
+# --------------------------------
+
 #Use pillow to paint a board with some text and a number
 def paintboard(board, iteration):
     im = Image.new("RGB", (6*50, 7*50), "white")
@@ -47,6 +52,12 @@ def delete_previous_output():
         except Exception as e:
             print(e)
 
+
+
+# --------------------------------
+# ------- HELPER FUNCTIONS -------
+# --------------------------------
+
 #Calculate the coordinates occupied by a given car
 def get_car_coords(car):
     coords = []
@@ -64,19 +75,15 @@ def get_car_coords(car):
         y = y + deltay
     return coords
 
-
 #Returnes wether the car is stuck or not
-def isStuck(car, board):
+def is_stuck(car, board):
     return calculate_options(car, board) == 0
 
 #Returnes the car that is blocking the coordinate
-def getBlockingCar(x,y, board):
+def get_blocking_car(x,y, board):
     for car in board:
         if (x,y) in get_car_coords(car):
             return car
-
-
-
 
 #Checks if a certain coordinate is occupied by a car
 def is_blocked(x, y, board):
@@ -123,40 +130,6 @@ def get_neighbours(board):
 def is_won(board):
     return board[0][1] + board[0][3] -1 == 5
 
-
-#
-#       HEURISTICS
-#
-
-#Returnes 0 if the coordinate is not blocked
-#1 if it is blocked or
-#2 if it is blocked and the blocking car is stuck
-def advanced_block_score(x, y, board):
-    if not is_blocked(x,y,board):
-        return 0
-    blockingCar = getBlockingCar(x,y, board)
-    if isStuck(blockingCar, board):
-        return 2
-    return 1
-
-def simple_blocking_and_manhattan(board):
-    return  simple_blocking(board) + manhattan(board)
-
-def simple_blocking(board):
-    n = 0
-    for i in range(board[0][1]+2, 6):   #how many of those are blocked?
-        if is_blocked(i, 2, board):
-            n = n + 1
-    return  n
-
-def manhattan(board):
-    return  4 - board[0][1]
-
-
-def zero_heuristic(board):
-    return 0
-
-
 #Iterates through the open set and returns the best board in it
 def get_best_board(open_set, cost, heuristic):
     bestcost = float("inf")
@@ -171,6 +144,59 @@ def get_best_board(open_set, cost, heuristic):
 #we created a custom hash function
 def hash_board(board):
     return ', '.join(str(x) for x in sum(board, []))
+
+
+
+# --------------------------------
+# ---------- HEURISTICS ----------
+# --------------------------------
+
+# Returns 0 if the coordinate is not blocked
+# 1 if it is blocked or
+# 2 if it is blocked and the blocking car is stuck
+def advanced_block_score(x, y, board):
+    if not is_blocked(x,y,board):
+        return 0
+    blockingCar = get_blocking_car(x,y, board)
+    if is_stuck(blockingCar, board):
+        return 2
+    return 1
+
+# Returns the sum of the advanced_block_score for the cars in the way
+def advanced_blocking(board):
+    n = 0
+    for i in range(board[0][1]+2, 6):
+        n += advanced_block_score(i, 2, board)
+    return n
+
+# Returns the sum of the advanced_blocking and manhattan
+def advanced_blocking_and_manhattan(board):
+    return advanced_blocking(board) + manhattan(board)
+
+# Returns the sum of the simple_blocking and manhattan
+def simple_blocking_and_manhattan(board):
+    return  simple_blocking(board) + manhattan(board)
+
+# Returns the number of blocked cells in the way of the car
+def simple_blocking(board):
+    n = 0
+    for i in range(board[0][1]+2, 6):   #how many of those are blocked?
+        if is_blocked(i, 2, board):
+            n = n + 1
+    return n
+
+# Returns the number of spaces to goal
+def manhattan(board):
+    return  4 - board[0][1]
+
+# Returns 0...
+def zero_heuristic(board):
+    return 0
+
+
+# --------------------------------
+# -------------- A* --------------
+# --------------------------------
 
 #Create a history of boards to reach the current board. Used to visualize the process
 #Can calculate how many moves to reach goal, as well display all steps
@@ -221,6 +247,7 @@ def astar(board, display, heuristic):
 
     return False
 
+
 board = []
 for line in sys.stdin:
     data = line.split(",")
@@ -231,6 +258,8 @@ astar(board, False, zero_heuristic)
 astar(board, False, simple_blocking)
 astar(board, False, manhattan)
 astar(board, False, simple_blocking_and_manhattan)
+astar(board, False, advanced_blocking)
+astar(board, False, advanced_blocking_and_manhattan)
 
-# cProfile.run('astar(board, False, zero_heuristic)')    #run the astar() function with profiling tools
+#cProfile.run('astar(board, False, zero_heuristic)')    #run the astar() function with profiling tools
 # cProfile.run('astar(board, False, simple_blocking_and_manhattan)')
