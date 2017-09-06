@@ -227,9 +227,11 @@ def astar(board, display, heuristic):
             print "-"*80
             print "Heuristic:      " + heuristic.__name__.replace("_"," ").title()
             print "Elapsed time:   " + str(round((time.time() * 1000) - started)) + " ms"
+            print "--------------------"
             print "Open nodes:     " + str(len(open_set))
             print "Closed nodes:   " + str(len(closed_set))
             print "Total nodes:    " + str(len(open_set) + len(closed_set))
+            print "--------------------"
             backtrack(current, parent, display)
             print "-"*80
             return True
@@ -256,12 +258,12 @@ for line in sys.stdin:
     board.append([int(data[0]), int(data[1]), int(data[2]), int(data[3])])
 
 delete_previous_output()
-astar(board, False, zero_heuristic)
-astar(board, False, simple_blocking)
-astar(board, False, manhattan)
-astar(board, False, simple_blocking_and_manhattan)
-astar(board, False, advanced_blocking)
-astar(board, False, advanced_blocking_and_manhattan)
+# astar(board, False, zero_heuristic)
+# astar(board, False, simple_blocking)
+# astar(board, False, manhattan)
+astar(board, True, simple_blocking_and_manhattan)
+#astar(board, False, advanced_blocking)
+#astar(board, False, advanced_blocking_and_manhattan)
 
 #cProfile.run('astar(board, False, zero_heuristic)')    #run the astar() function with profiling tools
 # cProfile.run('astar(board, False, simple_blocking_and_manhattan)')
