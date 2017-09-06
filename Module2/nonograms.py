@@ -24,11 +24,13 @@ row_specs.reverse()
 row_default_domain = [x for x in range(number_of_cols)]
 col_default_domain = [x for x in range(number_of_rows)]
 
-def create_variables_from_spec(spec, default_domain):
+def create_variables_from_spec(spec, default_domain, is_row, number):
     return map( lambda s: {"start" : -1
                           ,"domain": filter( lambda d: d + s <= len(default_domain)
                                            , default_domain[:])
-                          ,"length": s}
+                          ,"length": s
+                          ,"is_row": is_row
+                          ,"number": number}
               , spec)
 
 
@@ -38,13 +40,16 @@ def makefunc(var_names, expression, envir=globals()):
 
 pair_constraint = makefunc(["a", "b"], "b['start'] > a['start'] + a['length']")
 
+#intersection_constraint = makefunc(["a", "b"], "")
+
 # print apply(pair_constraint, [{"start": 0, "length": 2}, {"start":3, "length": 1}])
 
-row_variables = map(lambda s: create_variables_from_spec(s, row_default_domain), row_specs)
-col_variables = map(lambda s: create_variables_from_spec(s, col_default_domain), col_specs)
+row_variables = map(lambda (i,s): create_variables_from_spec(s, row_default_domain, True, i), enumerate(row_specs))
+col_variables = map(lambda (i,s): create_variables_from_spec(s, col_default_domain, False, i), enumerate(col_specs))
 
 
 constraints = []
+
 for i in range(len(row_variables)):
     for j in range(len(row_variables[i])-1):
         constraints.append((row_variables[i][j], row_variables[i][j+1]))
@@ -54,7 +59,8 @@ for i in range(len(col_variables)):
         constraints.append((col_variables[i][j], col_variables[i][j+1]))
 
 
-
+for row in col_variables:
+    print row
 
 # print "row specs:",row_specs
 # print "col specs:",col_specs
