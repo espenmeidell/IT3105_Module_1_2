@@ -52,8 +52,10 @@ def occupied_cell(index, variables):
 pair_constraint = makefunc(["a", "b"], "b['start'] > a['start'] + a['length']")
 intersection_constraint = makefunc(["a", "b"], "occupied_cell(b[0]['number'], a) == occupied_cell(a[0]['number'], b)")
 
-row_variables = map(lambda (i,s): create_variables_from_spec(s, row_default_domain, True, i), enumerate(row_specs))
-col_variables = map(lambda (i,s): create_variables_from_spec(s, col_default_domain, False, i), enumerate(col_specs))
+row_variables = map(lambda (i,s): create_variables_from_spec(s, row_default_domain, True, i),
+                    enumerate(row_specs))
+col_variables = map(lambda (i,s): create_variables_from_spec(s, col_default_domain, False, i),
+                    enumerate(col_specs))
 
 
 constraints = []
@@ -84,7 +86,14 @@ for row in row_variables:
                 "function": intersection_constraint
             })
 
+# flatten and join lists of variables
+variables = [ item for sublist in row_variables for item in sublist] \
+            + [ item for sublist in col_variables for item in sublist]
 
+def select_unassigned_variable(variables):
+    return next((v for v in variables if v["start"] == -1), None)
+
+print select_unassigned_variable(variables)
 
 # print "row specs:",row_specs
 # print "col specs:",col_specs
