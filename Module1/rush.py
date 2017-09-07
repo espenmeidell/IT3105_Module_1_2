@@ -1,9 +1,11 @@
 from PIL import Image, ImageDraw, ImageFont
 from copy import copy, deepcopy
 import cProfile
-import sys
 import os, shutil
-import time
+
+import sys
+sys.path.append('../')
+from astar import astar
 
 
 
@@ -194,62 +196,8 @@ def zero_heuristic(board):
     return 0
 
 
-# --------------------------------
-# -------------- A* --------------
-# --------------------------------
 
-#Create a history of boards to reach the current board. Used to visualize the process
-#Can calculate how many moves to reach goal, as well display all steps
-def backtrack(node, parent, display):
-    history = []
-    while hash_board(node) in parent.keys():
-        history.append(node)
-        node = parent[hash_board(node)]
-    history.reverse()
-    print "Solution Found:", len(history), "moves"
-    if display:
-        counter = 1
-        for board in history:
-            paintboard(board, counter)
-            counter = counter + 1
 
-#Generic A* code
-def astar(board, display, heuristic):
-    started = time.time()*1000
-    closed_set = set() # visited boards
-    open_set = [board] # unvisited
-    # parent and costs maps with the hashed boards
-    parent = {}
-    cost = {hash_board(board): 0}
-    while open_set:
-        current = get_best_board(open_set, cost, heuristic)
-        if is_won(current):
-            print "-"*80
-            print "Heuristic:      " + heuristic.__name__.replace("_"," ").title()
-            print "Elapsed time:   " + str(round((time.time() * 1000) - started)) + " ms"
-            print "--------------------"
-            print "Open nodes:     " + str(len(open_set))
-            print "Closed nodes:   " + str(len(closed_set))
-            print "Total nodes:    " + str(len(open_set) + len(closed_set))
-            print "--------------------"
-            backtrack(current, parent, display)
-            print "-"*80
-            return True
-        open_set.remove(current)
-        closed_set.add(hash_board(current))
-        for neighbour in get_neighbours(current):
-            if hash_board(neighbour) in closed_set:
-                continue
-
-            if neighbour not in open_set:
-                open_set.append(neighbour)
-            tentative_score = cost[hash_board(current)] + 1
-            if tentative_score >= cost.get(hash_board(neighbour), float("inf")):
-                continue
-            parent[hash_board(neighbour)] = current
-            cost[hash_board(neighbour)] = tentative_score
-
-    return False
 
 
 board = []
@@ -258,12 +206,49 @@ for line in sys.stdin:
     board.append([int(data[0]), int(data[1]), int(data[2]), int(data[3])])
 
 delete_previous_output()
-# astar(board, False, zero_heuristic)
-# astar(board, False, simple_blocking)
-# astar(board, False, manhattan)
-astar(board, True, simple_blocking_and_manhattan)
-#astar(board, False, advanced_blocking)
-#astar(board, False, advanced_blocking_and_manhattan)
+astar(
+    board,
+    get_best_board,
+    get_neighbours,
+    zero_heuristic,
+    is_won,
+    hash_board)
+astar(
+    board,
+    get_best_board,
+    get_neighbours,
+    simple_blocking,
+    is_won,
+    hash_board)
+astar(
+    board,
+    get_best_board,
+    get_neighbours,
+    manhattan,
+    is_won,
+    hash_board)
+astar(
+    board,
+    get_best_board,
+    get_neighbours,
+    simple_blocking_and_manhattan,
+    is_won,
+    hash_board,
+    paintboard)
+astar(
+    board,
+    get_best_board,
+    get_neighbours,
+    advanced_blocking,
+    is_won,
+    hash_board,)
+astar(
+    board,
+    get_best_board,
+    get_neighbours,
+    advanced_blocking_and_manhattan,
+    is_won,
+    hash_board)
 
 #cProfile.run('astar(board, False, zero_heuristic)')    #run the astar() function with profiling tools
-# cProfile.run('astar(board, False, simple_blocking_and_manhattan)')
+#cProfile.run('astar(board, False, simple_blocking_and_manhattan)')

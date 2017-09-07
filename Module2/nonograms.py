@@ -33,6 +33,7 @@ def create_variables_from_spec(spec, default_domain, is_row, number):
               , spec)
 
 
+# Helper function to make a function from the params
 def makefunc(var_names, expression, envir=globals()):
     args = ",".join(var_names)
     return eval("(lambda " + args + ": " + expression + ")", envir)
