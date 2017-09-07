@@ -6,6 +6,7 @@ import os, shutil
 import sys
 sys.path.append('../')
 from astar import astar
+from dfs import dfs
 
 
 
@@ -206,6 +207,9 @@ for line in sys.stdin:
     board.append([int(data[0]), int(data[1]), int(data[2]), int(data[3])])
 
 delete_previous_output()
+
+dfs(board, get_neighbours, is_won, hash_board)
+
 astar(
     board,
     get_best_board,
