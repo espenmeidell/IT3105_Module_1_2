@@ -238,7 +238,7 @@ astar(
     simple_blocking_and_manhattan,
     is_won,
     hash_board,
-    paintboard)
+    display = paintboard)
 astar(
     board,
     get_best_board,

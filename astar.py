@@ -26,6 +26,7 @@ def astar(
         heuristic,
         is_terminal,
         hash_function = lambda x: x,
+        arc_cost_function = lambda current, neighbour: 1,
         display = None):
     started = time.time()*1000
     closed_set = set() # visited boards
