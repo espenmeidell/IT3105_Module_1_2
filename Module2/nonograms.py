@@ -103,11 +103,19 @@ def select_unassigned_variable(variables):
 def number_of_conflicts(constraints):
     return len(filter(lambda c: apply(c["function"], c["variables"]), constraints))
 
-
-def revise_star(variable, constraint):
+def evaulate_domain_value(value, variable, constraint):
     pass
 
 
+def revise_star(variable, constraint):
+    variable["domain"] = filter(
+                            lambda d: evaulate_domain_value(d, variable, constraint),
+                            variable["domain"]
+                               )
+
+
+for v in variables:
+    print v["domain"]
 
 def solve(variables, constraints):
     # Initialize
@@ -123,12 +131,11 @@ def solve(variables, constraints):
                 queue.append((v, c))
     # Domain filtering loop
     while queue:
-        print len(queue)
         Xstar, Ci = queue.popleft()
         original_domain_length = len(Xstar["domain"])
         revise_star(Xstar, Ci)
         new_domain_length = len(Xstar["domain"])
-        if new_domain_length <= original_domain_length:
+        if new_domain_length < original_domain_length:
             for Ck in constraints:
                 if Ck != Ci:
                     if Ck["binary"]:
@@ -149,3 +156,10 @@ def solve(variables, constraints):
 
 
 solve(variables, constraints)
+
+
+print "..."
+
+
+for v in variables:
+    print v["domain"]
