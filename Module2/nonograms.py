@@ -1,5 +1,7 @@
-
+import numpy as np
 import sys
+from collections import deque
+
 
 
 first_line = sys.stdin.readline().split(" ")
@@ -25,7 +27,8 @@ row_default_domain = [x for x in range(number_of_cols)]
 col_default_domain = [x for x in range(number_of_rows)]
 
 def create_variables_from_spec(spec, default_domain, is_row, number):
-    return map( lambda s: {"start" : -1
+    return map( lambda s: {"start" : np.random.choice(filter( lambda d: d + s <= len(default_domain)
+                                                            , default_domain[:]))
                           ,"domain": filter( lambda d: d + s <= len(default_domain)
                                            , default_domain[:])
                           ,"length": s
@@ -65,6 +68,7 @@ for i in range(len(row_variables)):
     for j in range(len(row_variables[i])-1):
         constraints.append(
             {
+                "binary": True,
                 "variables":(row_variables[i][j], row_variables[i][j+1]),
                 "function": pair_constraint
             })
@@ -74,6 +78,7 @@ for i in range(len(col_variables)):
     for j in range(len(col_variables[i])-1):
         constraints.append(
             {
+                "binary": True,
                 "variables":(col_variables[i][j], col_variables[i][j+1]),
                 "function": pair_constraint
             })
@@ -83,6 +88,7 @@ for row in row_variables:
     for col in col_variables:
         constraints.append(
             {
+                "binary": False,
                 "variables":(row,col),
                 "function": intersection_constraint
             })
@@ -94,10 +100,52 @@ variables = [ item for sublist in row_variables for item in sublist] \
 def select_unassigned_variable(variables):
     return next((v for v in variables if v["start"] == -1), None)
 
-print select_unassigned_variable(variables)
+def number_of_conflicts(constraints):
+    return len(filter(lambda c: apply(c["function"], c["variables"]), constraints))
 
-# print "row specs:",row_specs
-# print "col specs:",col_specs
 
-# print row_default_domain
-# print col_default_domain
+def revise_star(variable, constraint):
+    pass
+
+
+
+def solve(variables, constraints):
+    # Initialize
+    queue = deque([])
+    for c in  constraints:
+        if c["binary"]:
+            queue.append((c["variables"][0], c))
+            queue.append((c["variables"][1], c))
+        else:
+            for v in c["variables"][0]:
+                queue.append((v, c))
+            for v in c["variables"][1]:
+                queue.append((v, c))
+    # Domain filtering loop
+    while queue:
+        print len(queue)
+        Xstar, Ci = queue.popleft()
+        original_domain_length = len(Xstar["domain"])
+        revise_star(Xstar, Ci)
+        new_domain_length = len(Xstar["domain"])
+        if new_domain_length <= original_domain_length:
+            for Ck in constraints:
+                if Ck != Ci:
+                    if Ck["binary"]:
+                        if Ck["variables"][0] != Xstar:
+                            queue.append((Ck["variables"][0], Ck))
+                        if Ck["variables"][1] != Xstar:
+                            queue.append((Ck["variables"][1], Ck))
+                    else:
+                        for v in Ck["variables"][0]:
+                            if v != Xstar:
+                                queue.append((v, Ck))
+                        for v in Ck["variables"][1]:
+                            if v != Xstar:
+                                queue.append((v, Ck))
+
+
+
+
+
+solve(variables, constraints)

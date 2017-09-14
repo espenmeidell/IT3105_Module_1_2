@@ -208,7 +208,7 @@ for line in sys.stdin:
 
 delete_previous_output()
 
-dfs(board, get_neighbours, is_won, hash_board)
+#dfs(board, get_neighbours, is_won, hash_board)
 
 astar(
     board,
@@ -239,20 +239,20 @@ astar(
     is_won,
     hash_board,
     display = paintboard)
-astar(
-    board,
-    get_best_board,
-    get_neighbours,
-    advanced_blocking,
-    is_won,
-    hash_board,)
-astar(
-    board,
-    get_best_board,
-    get_neighbours,
-    advanced_blocking_and_manhattan,
-    is_won,
-    hash_board)
+# astar(
+#     board,
+#     get_best_board,
+#     get_neighbours,
+#     advanced_blocking,
+#     is_won,
+#     hash_board,)
+# astar(
+#     board,
+#     get_best_board,
+#     get_neighbours,
+#     advanced_blocking_and_manhattan,
+#     is_won,
+#     hash_board)
 
 #cProfile.run('astar(board, False, zero_heuristic)')    #run the astar() function with profiling tools
 #cProfile.run('astar(board, False, simple_blocking_and_manhattan)')
