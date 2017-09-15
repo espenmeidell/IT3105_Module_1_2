@@ -24,6 +24,11 @@ for line in sys.stdin:
 
 row_specs.reverse()
 
+def makefunc(var_names, expression, envir=globals()):
+    args = ",".join(var_names)
+    return eval("(lambda " + args + ": " + expression + ")", envir)
+
+# for example: [1,2] results in the following list: [1,0,1,1]
 def generate_minimum_placement(spec):
     insert_positions = [0]
     result = []
@@ -34,6 +39,7 @@ def generate_minimum_placement(spec):
     result.pop()
     return (result, insert_positions)
 
+# recursively extend a minimum placement list until it is the correct length
 def generate_domain(wip_result, insert_positions, target_length):
     if len(wip_result) == target_length:
         return [wip_result]
@@ -50,10 +56,21 @@ def generate_domain(wip_result, insert_positions, target_length):
 def create_variables(specifications, is_row, target_length):
     return map( lambda (i, spec): { "index": i
                                   , "is_row": is_row
+                                  , "value": None
                                   , "domain": generate_domain( *generate_minimum_placement(spec)
                                                              , target_length = target_length
                                                              )
                                   }
               , enumerate(specifications))
 
-print create_variables(row_specs, True, number_of_rows)[0]
+row_variables = create_variables(row_specs, True, number_of_rows)
+col_variables = create_variables(col_specs, False, number_of_cols)
+
+variables = row_variables
+variables.extend(col_variables)
+
+intersection_constraint = makefunc(["row", "col"], "row['value'][col['index']] == col['value'][row['index']]")
+
+constraints = map( lambda pair: { "variables": pair
+                                , "function": intersection_constraint}
+                 , itertools.product(row_variables, col_variables))
