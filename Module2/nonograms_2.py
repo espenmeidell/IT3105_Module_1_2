@@ -85,8 +85,10 @@ def revise(X, C):
         for dY in Y["domain"]:
             Y["value"] = dY
             if apply(C["function"], (X, Y)):
-                new_domain.append(dX)
+                if dX not in new_domain:
+                    new_domain.append(dX)
                 continue
+    X["domain"] = new_domain
 
 def solve(variables, constraints):
     # Initialize
@@ -100,6 +102,7 @@ def solve(variables, constraints):
         original_domain_length = len(Xstar["domain"])
         revise(Xstar, Ci)
         if original_domain_length < len(Xstar["domain"]):
+            # print "YAY"
             for Ck in constraints:
                 if Ck != Ci:
                     if Ck["variables"][1] == Xstar:
@@ -109,5 +112,7 @@ def solve(variables, constraints):
 
 
 
-
 solve(variables, constraints)
+
+for variable in row_variables:
+    print len(variable["domain"])
