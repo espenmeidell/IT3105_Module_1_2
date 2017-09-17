@@ -63,14 +63,51 @@ def create_variables(specifications, is_row, target_length):
                                   }
               , enumerate(specifications))
 
-row_variables = create_variables(row_specs, True, number_of_rows)
-col_variables = create_variables(col_specs, False, number_of_cols)
+row_variables = create_variables(row_specs, True, number_of_cols)
+col_variables = create_variables(col_specs, False, number_of_rows)
 
-variables = row_variables
-variables.extend(col_variables)
+variables = row_variables[:]
+variables.extend(col_variables[:])
 
 intersection_constraint = makefunc(["row", "col"], "row['value'][col['index']] == col['value'][row['index']]")
+
+
 
 constraints = map( lambda pair: { "variables": pair
                                 , "function": intersection_constraint}
                  , itertools.product(row_variables, col_variables))
+
+def revise(X, C):
+    new_domain = []
+    Y = C["variables"][1]
+    for dX in X["domain"]:
+        X["value"] = dX
+        for dY in Y["domain"]:
+            Y["value"] = dY
+            if apply(C["function"], (X, Y)):
+                new_domain.append(dX)
+                continue
+
+def solve(variables, constraints):
+    # Initialize
+    queue = deque([])
+    for c in constraints:
+        queue.append((c["variables"][0], c))
+
+    # Domain Filtering Loop
+    while queue:
+        Xstar, Ci = queue.popleft()
+        original_domain_length = len(Xstar["domain"])
+        revise(Xstar, Ci)
+        if original_domain_length < len(Xstar["domain"]):
+            for Ck in constraints:
+                if Ck != Ci:
+                    if Ck["variables"][1] == Xstar:
+                        queue.append((Ck["variables"][0], Ck))
+
+
+
+
+
+
+solve(variables, constraints)
