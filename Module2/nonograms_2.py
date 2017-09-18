@@ -3,6 +3,8 @@ import sys
 from termcolor import colored
 from collections import deque
 import itertools
+import cProfile
+
 
 
 
@@ -124,13 +126,16 @@ constraints.extend(map( lambda pair: { "variables": pair
 
 def print_result(variables):
     rows = filter(lambda v: v["is_row"], variables)
+    print colored(' ', 'white', attrs=['reverse', 'blink']) * (number_of_cols * 2 + 3)
     for row in rows:
+        print colored(' ', 'white', attrs=['reverse', 'blink']),
         for c in row["domain"][0]:
             if c:
                 print colored(' ', 'red', attrs=['reverse', 'blink']),
             else:
                 print ' ',
-        print
+        print colored(' ', 'white', attrs=['reverse', 'blink'])
+    print colored(' ', 'white', attrs=['reverse', 'blink']) * (number_of_cols * 2 + 3)
 
 
 def revise(C):
@@ -150,7 +155,7 @@ def revise(C):
                     if dX not in new_domain:
                         new_domain.append(dX)
                     continue
-    reduced = len(X["domain"]) != len(new_domain)
+    reduced = len(X["domain"]) > len(new_domain)
     X["domain"] = new_domain
     return reduced
 
@@ -169,10 +174,13 @@ def solve(variables, constraints):
             for Ck in constraints:
                 if Ci["variables"][0] == Ck["variables"][1]:
                     queue.append(Ck)
+                # if Ck != Ci:
+                #     if Ci["variables"][0] == Ck["variables"][1] and Ci["variables"][0] != Ck["variables"][0]:
+                #         queue.append(Ck)
 
     print_result(variables)
 
-solve(variables, constraints)
+cProfile.run('solve(variables, constraints)')
 
-for variable in row_variables:
-    print len(variable["domain"])
+# for variable in row_variables:
+#     print len(variable["domain"])
