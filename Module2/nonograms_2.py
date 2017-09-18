@@ -2,10 +2,11 @@ import numpy as np
 import sys
 from termcolor import colored
 from collections import deque
+from copy import copy, deepcopy
+sys.path.append('../')
+from astar import astar
 import itertools
 import cProfile
-
-
 
 
 first_line = sys.stdin.readline().split(" ")
@@ -27,10 +28,6 @@ for line in sys.stdin:
 
 row_specs.reverse()
 
-def makefunc(var_names, expression, envir=globals()):
-    args = ",".join(var_names)
-    return eval("(lambda " + args + ": " + expression + ")", envir)
-
 # for example: [1,2] results in the following list: [1,0,1,1]
 def generate_minimum_placement(spec):
     insert_positions = [0]
@@ -42,19 +39,6 @@ def generate_minimum_placement(spec):
     result.pop()
     return (result, insert_positions)
 
-# recursively extend a minimum placement list until it is the correct length
-def generate_domain(wip_result, insert_positions, target_length):
-    if len(wip_result) == target_length:
-        return [wip_result]
-    result = []
-    for i in range(len(insert_positions)):
-        new_wip = wip_result[:]
-        new_wip.insert(insert_positions[i], 0)
-        new_pos = insert_positions[:]
-        for j in range(i, len(insert_positions)):
-            new_pos[j] = new_pos[j] + 1
-        result.extend(generate_domain(new_wip, new_pos, target_length))
-    return list(map(list, set(map(tuple, result))))
 
 def create_domain(length, specifications):
     # generate minimum placement
@@ -80,56 +64,35 @@ def create_domain(length, specifications):
         domain.append(result)
     return domain
 
-# Espen sin variant
 
-# def create_variables(specifications, is_row, target_length):
-#     return map( lambda (i, spec): { "index": i
-#                                   , "is_row": is_row
-#                                   , "value": None
-#                                   , "domain": generate_domain( *generate_minimum_placement(spec)
-#                                                              , target_length = target_length
-#                                                              )
-#                                   }
-#               , enumerate(specifications))
+domains = {}
 
-# Markus sin variant
+def create_variables_2(specifications, is_row, target_length):
+    variables = []
+    for (i, spec) in enumerate(specifications):
+        variable_name = "R" + str(i) if is_row else "C" + str(i)
+        domains[variable_name] = create_domain(target_length, spec)
+        variables.append(variable_name)
+    return variables
 
-def create_variables(specifications, is_row, target_length):
-  return map( lambda (i, spec): { "index": i
-                                , "is_row": is_row
-                                , "name": "R" + str(i) if is_row else "C" + str(i)
-                                , "value": None
-                                , "domain": create_domain(target_length, spec)
-                                }
-            , enumerate(specifications))
+variables2 = create_variables_2(row_specs, True, number_of_cols)
+variables2.extend(create_variables_2(col_specs, False, number_of_rows))
 
-row_variables = create_variables(row_specs, True, number_of_cols)
-col_variables = create_variables(col_specs, False, number_of_rows)
-
-variables = row_variables[:]
-variables.extend(col_variables[:])
-
-intersection_constraint = makefunc(["row", "col"], "row['value'][col['index']] == col['value'][row['index']]")
-
-
-# row-col
-constraints = map( lambda pair: { "variables": pair
-                                , "function": intersection_constraint}
-                 , itertools.product(row_variables, col_variables))
-
-# col-row
-constraints.extend(map( lambda pair: { "variables": pair
-                                     , "function": intersection_constraint}
-                      , itertools.product(col_variables, row_variables)))
+constraint_pairs = list(itertools.product( filter(lambda v: v[0] == 'R', variables2)
+                                         , filter(lambda v: v[0] == 'C', variables2)))
+constraint_pairs.extend(itertools.product( filter(lambda v: v[0] == 'C', variables2)
+                                         , filter(lambda v: v[0] == 'R', variables2)))
 
 
 
-def print_result(variables):
-    rows = filter(lambda v: v["is_row"], variables)
+
+
+def print_result(variables, domain):
+    rows = filter(lambda v: is_row(v), variables)
     print colored(' ', 'white', attrs=['reverse', 'blink']) * (number_of_cols * 2 + 3)
     for row in rows:
         print colored(' ', 'white', attrs=['reverse', 'blink']),
-        for c in row["domain"][0]:
+        for c in domain[row][0]:
             if c:
                 print colored(' ', 'red', attrs=['reverse', 'blink']),
             else:
@@ -138,49 +101,76 @@ def print_result(variables):
     print colored(' ', 'white', attrs=['reverse', 'blink']) * (number_of_cols * 2 + 3)
 
 
-def revise(C):
+def is_row(variable):
+    return variable[0] == "R"
+
+def get_index_from_variable(variable):
+    return int(variable[1:])
+
+def check_constraint(row, row_index, col, col_index):
+    return row[col_index] == col[row_index]
+
+def revise_2(X, Y, domains):
     new_domain = []
-    X, Y = C["variables"]
-    for dX in X["domain"]:
-        X["value"] = dX
-        for dY in Y["domain"]:
-            Y["value"] = dY
-            if X["is_row"]:     # row-col constraint
-                if apply(C["function"], (X, Y)):
+    for dX in domains[X]:
+        for dY in domains[Y]:
+            if is_row(X):
+                if check_constraint(dX, get_index_from_variable(X), dY, get_index_from_variable(Y)):
                     if dX not in new_domain:
                         new_domain.append(dX)
                     continue
-            else:               #col-row constraint
-                if apply(C["function"], (Y, X)):
+            else:
+                if check_constraint(dY, get_index_from_variable(Y), dX, get_index_from_variable(X)):
                     if dX not in new_domain:
                         new_domain.append(dX)
                     continue
-    reduced = len(X["domain"]) > len(new_domain)
-    X["domain"] = new_domain
+    reduced = len(domains[X]) > len(new_domain)
+    domains[X] = new_domain
     return reduced
 
+def find_successor(open_set, cost, heuristic):
+    return open_set[0]
 
-def solve(variables, constraints):
-    # Initialize
+def generate_successors(current):
+    variables = current.keys()
+    successors = []
+    for var in variables:
+        for p in current[var]:
+            child = deepcopy(current)
+            child[var] = [p]
+            successors.append(child)
+    return successors
+
+def heuristic(board):
+    return 0
+
+def is_terminal(board):
+    return len(board.keys()) == len(filter(lambda v: len(v) == 1, board.values()))
+
+def hash_function(a):
+    return str(a)
+
+def solve_2(variables, constraints, domains):
     queue = deque([])
     for c in constraints:
         queue.append(c)
 
-    # Domain Filtering Loop
     while queue:
-        Ci = queue.popleft()
-        reduced = revise(Ci)
+        X, Y = queue.popleft()
+        reduced = revise_2(X, Y, domains)
         if reduced:
             for Ck in constraints:
-                if Ci["variables"][0] == Ck["variables"][1]:
+                if X == Ck[1]:
                     queue.append(Ck)
-                # if Ck != Ci:
-                #     if Ci["variables"][0] == Ck["variables"][1] and Ci["variables"][0] != Ck["variables"][0]:
-                #         queue.append(Ck)
 
-    print_result(variables)
+    if len(filter(lambda v: len(domains[v]) > 1, variables)) != 0:    # are all domains reduced to 1
+        print astar(domains, find_successor, generate_successors, heuristic, is_terminal, hash_function)
+    else:
+        print_result(variables, domains)
 
-cProfile.run('solve(variables, constraints)')
 
+
+# cProfile.run('solve(variables, constraints)')
+solve_2(variables2, constraint_pairs, domains)
 # for variable in row_variables:
 #     print len(variable["domain"])
