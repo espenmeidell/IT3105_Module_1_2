@@ -1,5 +1,6 @@
 import numpy as np
 import sys
+from termcolor import colored
 from collections import deque
 import itertools
 
@@ -53,15 +54,52 @@ def generate_domain(wip_result, insert_positions, target_length):
         result.extend(generate_domain(new_wip, new_pos, target_length))
     return list(map(list, set(map(tuple, result))))
 
+def create_domain(length, specifications):
+    # generate minimum placement
+    domain = []
+    min_placement = []
+    for s in specifications:
+        for i in range(s):
+            min_placement.append(1)
+        min_placement.append(0)
+    min_placement.pop(len(min_placement) - 1)
+
+    insert_indices = [i + 1 for i, x in enumerate(min_placement) if x == 0]
+    insert_indices.extend([0, len(min_placement)])
+    combinations = itertools.combinations_with_replacement(insert_indices, length - len(min_placement))
+    for c in combinations:
+        result = min_placement[:]
+        insert_positions = list(c)
+        insert_positions.sort()
+        offset = 0
+        for index in insert_positions:
+            result.insert(index + offset, 0)
+            offset += 1
+        domain.append(result)
+    return domain
+
+# Espen sin variant
+
+# def create_variables(specifications, is_row, target_length):
+#     return map( lambda (i, spec): { "index": i
+#                                   , "is_row": is_row
+#                                   , "value": None
+#                                   , "domain": generate_domain( *generate_minimum_placement(spec)
+#                                                              , target_length = target_length
+#                                                              )
+#                                   }
+#               , enumerate(specifications))
+
+# Markus sin variant
+
 def create_variables(specifications, is_row, target_length):
-    return map( lambda (i, spec): { "index": i
-                                  , "is_row": is_row
-                                  , "value": None
-                                  , "domain": generate_domain( *generate_minimum_placement(spec)
-                                                             , target_length = target_length
-                                                             )
-                                  }
-              , enumerate(specifications))
+  return map( lambda (i, spec): { "index": i
+                                , "is_row": is_row
+                                , "name": "R" + str(i) if is_row else "C" + str(i)
+                                , "value": None
+                                , "domain": create_domain(target_length, spec)
+                                }
+            , enumerate(specifications))
 
 row_variables = create_variables(row_specs, True, number_of_cols)
 col_variables = create_variables(col_specs, False, number_of_rows)
@@ -72,45 +110,67 @@ variables.extend(col_variables[:])
 intersection_constraint = makefunc(["row", "col"], "row['value'][col['index']] == col['value'][row['index']]")
 
 
-
+# row-col
 constraints = map( lambda pair: { "variables": pair
                                 , "function": intersection_constraint}
                  , itertools.product(row_variables, col_variables))
 
-def revise(X, C):
+# col-row
+constraints.extend(map( lambda pair: { "variables": pair
+                                     , "function": intersection_constraint}
+                      , itertools.product(col_variables, row_variables)))
+
+
+
+def print_result(variables):
+    rows = filter(lambda v: v["is_row"], variables)
+    for row in rows:
+        for c in row["domain"][0]:
+            if c:
+                print colored(' ', 'red', attrs=['reverse', 'blink']),
+            else:
+                print ' ',
+        print
+
+
+def revise(C):
     new_domain = []
-    Y = C["variables"][1]
+    X, Y = C["variables"]
     for dX in X["domain"]:
         X["value"] = dX
         for dY in Y["domain"]:
             Y["value"] = dY
-            if apply(C["function"], (X, Y)):
-                if dX not in new_domain:
-                    new_domain.append(dX)
-                continue
+            if X["is_row"]:     # row-col constraint
+                if apply(C["function"], (X, Y)):
+                    if dX not in new_domain:
+                        new_domain.append(dX)
+                    continue
+            else:               #col-row constraint
+                if apply(C["function"], (Y, X)):
+                    if dX not in new_domain:
+                        new_domain.append(dX)
+                    continue
+    reduced = len(X["domain"]) != len(new_domain)
     X["domain"] = new_domain
+    return reduced
+
 
 def solve(variables, constraints):
     # Initialize
     queue = deque([])
     for c in constraints:
-        queue.append((c["variables"][0], c))
+        queue.append(c)
 
     # Domain Filtering Loop
     while queue:
-        Xstar, Ci = queue.popleft()
-        original_domain_length = len(Xstar["domain"])
-        revise(Xstar, Ci)
-        if original_domain_length < len(Xstar["domain"]):
-            # print "YAY"
+        Ci = queue.popleft()
+        reduced = revise(Ci)
+        if reduced:
             for Ck in constraints:
-                if Ck != Ci:
-                    if Ck["variables"][1] == Xstar:
-                        queue.append((Ck["variables"][0], Ck))
+                if Ci["variables"][0] == Ck["variables"][1]:
+                    queue.append(Ck)
 
-
-
-
+    print_result(variables)
 
 solve(variables, constraints)
 
