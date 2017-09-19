@@ -131,30 +131,36 @@ def revise_2(X, Y, domains):
 def find_successor(open_set, cost, heuristic):
     return open_set[0]
 
+# Create successor state by creating new triples where the domain is cloned and reduced
 def generate_successors(current):
-    variables = current.keys()
     successors = []
-    for var in variables:
-        for p in current[var]:
-            child = deepcopy(current)
-            child[var] = [p]
-            successors.append(child)
+    for var in current[0]:
+        for p in current[1][var]:
+            child_domain = deepcopy(current[1])
+            child_domain[var] = [p]
+            # Reduce domain of successors
+            queue = deque([])
+            for c in current[2]:
+                if var == c[1]:
+                    queue.append(c)
+            domain_filtering_loop(queue, child_domain, current[2])
+            # Only retain successor if it is a legal state
+            if (all(len(child_domain[v]) > 0 for v in current[0])):
+                successors.append((current[0], child_domain, current[2]))
     return successors
 
-def heuristic(board):
+def heuristic(state):
     return 0
 
-def is_terminal(board):
-    return len(board.keys()) == len(filter(lambda v: len(v) == 1, board.values()))
+# Check if the domain length for each variable is 1
+def is_terminal(state):
+    return len(state[0]) == len(filter(lambda v: len(v) == 1, state[1].values()))
 
-def hash_function(a):
-    return str(a)
+# Create a hash of the domain
+def hash_function(s):
+    return str(s[1])
 
-def solve_2(variables, constraints, domains):
-    queue = deque([])
-    for c in constraints:
-        queue.append(c)
-
+def domain_filtering_loop(queue, domains, constraints):
     while queue:
         X, Y = queue.popleft()
         reduced = revise_2(X, Y, domains)
@@ -163,14 +169,27 @@ def solve_2(variables, constraints, domains):
                 if X == Ck[1]:
                     queue.append(Ck)
 
+def solve_2(variables, domains, constraints):
+    queue = deque([])
+    for c in constraints:
+        queue.append(c)
+
+    domain_filtering_loop(queue, domains, constraints)
+
     if len(filter(lambda v: len(domains[v]) > 1, variables)) != 0:    # are all domains reduced to 1
-        print astar(domains, find_successor, generate_successors, heuristic, is_terminal, hash_function)
+        result = astar((variables, domains, constraints)
+                    , find_successor
+                    , generate_successors
+                    , heuristic
+                    , is_terminal
+                    , hash_function)
+        print_result(result[1][0], result[1][1])
     else:
         print_result(variables, domains)
 
 
 
 # cProfile.run('solve(variables, constraints)')
-solve_2(variables2, constraint_pairs, domains)
+solve_2(variables2, domains, constraint_pairs)
 # for variable in row_variables:
 #     print len(variable["domain"])
