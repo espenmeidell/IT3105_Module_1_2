@@ -8,6 +8,8 @@ from astar import astar
 import itertools
 import cProfile
 
+
+
 '''
         Read specifications from input
 '''
@@ -117,16 +119,22 @@ def get_index_from_variable(variable):
 # Prints the nonogram in a pretty way
 def print_result(variables, domain):
     rows = filter(lambda v: is_row(v), variables)
+    print
     print colored(' ', 'white', attrs=['reverse', 'blink']) * (number_of_cols * 2 + 3)
     for row in rows:
         print colored(' ', 'white', attrs=['reverse', 'blink']),
-        for c in domain[row][0]:
-            if c:
-                print colored(' ', 'red', attrs=['reverse', 'blink']),
-            else:
-                print ' ',
+        if len(domain[row]) == 1:
+            for c in domain[row][0]:
+                if c:
+                    print colored(' ', 'red', attrs=['reverse', 'blink']),
+                else:
+                    print ' ',
+        else:
+            print ' ' * ((number_of_cols * 2)-1),
         print colored(' ', 'white', attrs=['reverse', 'blink'])
+
     print colored(' ', 'white', attrs=['reverse', 'blink']) * (number_of_cols * 2 + 3)
+
 
 '''
         A* Functions
@@ -194,10 +202,15 @@ def revise(X, Y, domains, evaluate_variables):
 
 # Will filter the domains for variables in the constraint pairs
 def domain_filtering_loop(queue, domains, constraints, evaluate_variables):
+    done_domain_count = len(filter(lambda d: len(d) == 1, domains.values()))                # DISPLAY CODE
     while queue:
         X, Y = queue.popleft()
         reduced = revise(X, Y, domains, evaluate_variables)
         if reduced:
+            new_done_domain_count = len(filter(lambda d: len(d) == 1, domains.values()))    # DISPLAY CODE
+            if new_done_domain_count > done_domain_count:                                   # DISPLAY CODE
+                done_domain_count = new_done_domain_count                                   # DISPLAY CODE
+                print_result(variables, domains)                                            # DISPLAY CODE
             for Ck in constraints:
                 if X == Ck[1]:
                     queue.append(Ck)
@@ -212,7 +225,7 @@ def solve(variables, domains, constraints, evaluate_variables):
 
     domain_filtering_loop(queue, domains, constraints, evaluate_variables)
 
-    if len(filter(lambda v: len(domains[v]) > 1, variables)) != 0:    # are all domains reduced to 1
+    if any(map(lambda v: len(domains[v]) > 1, variables)):
         result = astar((variables, domains, constraints)
                       , find_successor
                       , generate_successors
@@ -220,6 +233,10 @@ def solve(variables, domains, constraints, evaluate_variables):
                       , is_terminal
                       , hash_function)
         print_result(result[1][0], result[1][1])
+
+    elif any(map(lambda v: len(domains[v]) == 0, variables)):
+        print "No solution found, got this far: "
+        print_result(variables, domains)
     else:
         print_result(variables, domains)
 
