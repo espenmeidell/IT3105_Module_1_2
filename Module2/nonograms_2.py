@@ -58,7 +58,7 @@ def create_domain(length, specifications):
     number_to_insert = length - len(min_placement)
 
     # We need to insert number_to_insert zeros to achieve the correct length.
-    # to do this we generate alllength - len(min_placement) combination with replacements of the insert_indices,
+    # to do this we generate all length - len(min_placement) combination with replacements of the insert_indices,
     # that are of that length. This list will tell us where to insert each zero.
     combinations = itertools.combinations_with_replacement(insert_indices, number_to_insert)
 
@@ -151,8 +151,10 @@ def find_successor(open_set, cost, heuristic):
 
 # Create successor state by creating new triples where the domain is cloned and
 # reduced using the domain_filtering_loop function.
-def generate_successors(current):           # expande bare en?
+def generate_successors(current):
     successors = []
+    # sorted_variables = current[0][:]                              # sort by length of domain
+    # sorted_variables.sort(key=lambda v: len(current[1][v]))       # sort by length of domain
     for var in current[0]:
         for p in current[1][var]:
             child_domain = deepcopy(current[1])
@@ -245,5 +247,5 @@ def solve(variables, domains, constraints, evaluate_variables):
         Launching
 '''
 
-
-cProfile.run('solve(variables, domains, constraint_pairs, evaluate_intersection)')
+# cProfile.run('solve(variables, domains, constraint_pairs, evaluate_intersection)')
+solve(variables, domains, constraint_pairs, evaluate_intersection)
