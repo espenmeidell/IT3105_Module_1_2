@@ -1,8 +1,18 @@
 import numpy as np
 import sys
+from termcolor import colored
 from collections import deque
+from copy import copy, deepcopy
+sys.path.append('../')
+from astar import astar
+import itertools
+import cProfile
 
 
+
+'''
+        Read specifications from input
+'''
 
 first_line = sys.stdin.readline().split(" ")
 number_of_cols = int(first_line[0].strip())
@@ -23,143 +33,219 @@ for line in sys.stdin:
 
 row_specs.reverse()
 
-row_default_domain = [x for x in range(number_of_cols)]
-col_default_domain = [x for x in range(number_of_rows)]
+'''
+        Functions to create variables, domains and
+        constraints for the specifications
+'''
 
-def create_variables_from_spec(spec, default_domain, is_row, number):
-    return map( lambda s: {"start" : np.random.choice(filter( lambda d: d + s <= len(default_domain)
-                                                            , default_domain[:]))
-                          ,"domain": filter( lambda d: d + s <= len(default_domain)
-                                           , default_domain[:])
-                          ,"length": s
-                          ,"number": number}
-              , spec)
+# for example: [1,2] results in the following list: [1,0,1,1]. This list is
+# returned together with a list of positions we can insert zeros
+def generate_minimum_placement(spec):
+    insert_positions = [0]
+    result = []
+    for item in spec:
+        result.extend([1] * item)
+        result.append(0)
+        insert_positions.append(len(result) -1)
+    result.pop()
+    return (result, insert_positions)
 
+# Creates the domain of possible values of a certain length, given a specification
+def create_domain(length, specifications):
 
-# Helper function to make a function from the params
-def makefunc(var_names, expression, envir=globals()):
-    args = ",".join(var_names)
-    return eval("(lambda " + args + ": " + expression + ")", envir)
+    min_placement, insert_indices = generate_minimum_placement(specifications)
+    domain = []
+    number_to_insert = length - len(min_placement)
 
+    # We need to insert number_to_insert zeros to achieve the correct length.
+    # to do this we generate all length - len(min_placement) combination with replacements of the insert_indices,
+    # that are of that length. This list will tell us where to insert each zero.
+    combinations = itertools.combinations_with_replacement(insert_indices, number_to_insert)
 
-# Checks if the index is occupied given a set of variables
-# Used to check intersections
-def occupied_cell(index, variables):
-    for var in variables:
-        start_pos = var["start"]
-        if start_pos == -1:
-            continue
-        if start_pos <= index and start_pos + var["length"] >= index:
-            return True
-    return False
-
-pair_constraint = makefunc(["a", "b"], "b['start'] > a['start'] + a['length']")
-intersection_constraint = makefunc(["a", "b"], "occupied_cell(b[0]['number'], a) == occupied_cell(a[0]['number'], b)")
-
-row_variables = map(lambda (i,s): create_variables_from_spec(s, row_default_domain, True, i),
-                    enumerate(row_specs))
-col_variables = map(lambda (i,s): create_variables_from_spec(s, col_default_domain, False, i),
-                    enumerate(col_specs))
-
-
-constraints = []
-# row pair_constraints
-for i in range(len(row_variables)):
-    for j in range(len(row_variables[i])-1):
-        constraints.append(
-            {
-                "binary": True,
-                "variables":(row_variables[i][j], row_variables[i][j+1]),
-                "function": pair_constraint
-            })
-
-# col pair_constraints
-for i in range(len(col_variables)):
-    for j in range(len(col_variables[i])-1):
-        constraints.append(
-            {
-                "binary": True,
-                "variables":(col_variables[i][j], col_variables[i][j+1]),
-                "function": pair_constraint
-            })
-
-# all intersection_constraints
-for row in row_variables:
-    for col in col_variables:
-        constraints.append(
-            {
-                "binary": False,
-                "variables":(row,col),
-                "function": intersection_constraint
-            })
-
-# flatten and join lists of variables
-variables = [ item for sublist in row_variables for item in sublist] \
-            + [ item for sublist in col_variables for item in sublist]
-
-def select_unassigned_variable(variables):
-    return next((v for v in variables if v["start"] == -1), None)
-
-def number_of_conflicts(constraints):
-    return len(filter(lambda c: apply(c["function"], c["variables"]), constraints))
-
-def evaulate_domain_value(value, variable, constraint):
-    pass
+    for c in combinations:
+        result = min_placement[:]
+        insert_positions = list(c)
+        insert_positions.sort()
+        # Once we insert a zero we have to increase all the following indices
+        # to prevent destroying the pattern. To do this we use the offset variable
+        offset = 0
+        for index in insert_positions:
+            result.insert(index + offset, 0)
+            offset += 1
+        domain.append(result)
+    return domain
 
 
-def revise_star(variable, constraint):
-    variable["domain"] = filter(
-                            lambda d: evaulate_domain_value(d, variable, constraint),
-                            variable["domain"]
-                               )
+def create_variables(specifications, is_row, target_length):
+    variables = []
+    for (i, spec) in enumerate(specifications):
+        variable_name = "R" + str(i) if is_row else "C" + str(i)
+        domains[variable_name] = create_domain(target_length, spec)
+        variables.append(variable_name)
+    return variables
+
+'''
+        Define the variables, domains and constraint pairs
+'''
+
+domains = {}
+
+variables = create_variables(row_specs, True, number_of_cols)
+variables.extend(create_variables(col_specs, False, number_of_rows))
 
 
-for v in variables:
-    print v["domain"]
+constraint_pairs = list(itertools.product( filter(lambda v: v[0] == 'R', variables)
+                                         , filter(lambda v: v[0] == 'C', variables)))
+constraint_pairs.extend(itertools.product( filter(lambda v: v[0] == 'C', variables)
+                                         , filter(lambda v: v[0] == 'R', variables)))
 
-def solve(variables, constraints):
-    # Initialize
-    queue = deque([])
-    for c in  constraints:
-        if c["binary"]:
-            queue.append((c["variables"][0], c))
-            queue.append((c["variables"][1], c))
+# the constraint used in the puzzle
+def evaluate_intersection(X, Y, value_X, value_Y):
+    return value_X[get_index_from_variable(Y)] == value_Y[get_index_from_variable(X)]
+
+
+'''
+        Utility functions
+'''
+
+# checks if a variable is a row
+def is_row(variable):
+    return variable[0] == "R"
+
+# Takes a varaible (string) and returns its index in the puzzle
+def get_index_from_variable(variable):
+    return int(variable[1:])
+
+# Prints the nonogram in a pretty way
+def print_result(variables, domain):
+    rows = filter(lambda v: is_row(v), variables)
+    print
+    print colored(' ', 'white', attrs=['reverse', 'blink']) * (number_of_cols * 2 + 3)
+    for row in rows:
+        print colored(' ', 'white', attrs=['reverse', 'blink']),
+        if len(domain[row]) == 1:
+            for c in domain[row][0]:
+                if c:
+                    print colored(' ', 'red', attrs=['reverse', 'blink']),
+                else:
+                    print ' ',
         else:
-            for v in c["variables"][0]:
-                queue.append((v, c))
-            for v in c["variables"][1]:
-                queue.append((v, c))
-    # Domain filtering loop
+            print ' ' * ((number_of_cols * 2)-1),
+        print colored(' ', 'white', attrs=['reverse', 'blink'])
+
+    print colored(' ', 'white', attrs=['reverse', 'blink']) * (number_of_cols * 2 + 3)
+
+
+'''
+        A* Functions
+'''
+# finds the best successor, currently only using the heuristic score
+def find_successor(open_set, cost, heuristic):
+    bestcost = float("inf")
+    bestboard = None
+    for board in open_set:
+        if heuristic(board) < bestcost:
+            bestboard = board
+            bestcost = heuristic(board)
+    return bestboard
+
+# Create successor state by creating new triples where the domain is cloned and
+# reduced using the domain_filtering_loop function.
+def generate_successors(current):
+    successors = []
+    # sorted_variables = current[0][:]                              # sort by length of domain
+    # sorted_variables.sort(key=lambda v: len(current[1][v]))       # sort by length of domain
+    for var in current[0]:
+        for p in current[1][var]:
+            child_domain = deepcopy(current[1])
+            child_domain[var] = [p]
+            # Reduce domain of successors
+            queue = deque([])
+            for c in current[2]:
+                if var == c[1]:
+                    queue.append(c)
+            domain_filtering_loop(queue, child_domain, current[2], evaluate_intersection)
+            # Only retain successor if it is a legal state
+            if (all(len(child_domain[v]) > 0 for v in current[0])):
+                successors.append((current[0], child_domain, current[2]))
+    return successors
+
+# The sum of the length of the domains in the current state, a useful constraint
+# when selecting the next state to investigate
+def heuristic(state):
+    return sum(map(lambda d: len(d), state[1].values()))
+
+# Check if the domain length for each variable is 1
+def is_terminal(state):
+    return len(state[0]) == len(filter(lambda v: len(v) == 1, state[1].values()))
+
+# Create a hash of the domain
+def hash_function(s):
+    return str(s[1])
+
+'''
+        CSP Functions
+'''
+
+# Uses the evaluate_variables function to remove illegal values in the domains of
+# the two variables, X and Y
+def revise(X, Y, domains, evaluate_variables):
+    new_domain = []
+    for dX in domains[X]:
+        for dY in domains[Y]:
+            if evaluate_variables(X, Y, dX, dY):
+                if dX not in new_domain:
+                    new_domain.append(dX)
+                break
+
+    reduced = len(domains[X]) > len(new_domain)
+    domains[X] = new_domain
+    return reduced
+
+# Will filter the domains for variables in the constraint pairs
+def domain_filtering_loop(queue, domains, constraints, evaluate_variables):
+    done_domain_count = len(filter(lambda d: len(d) == 1, domains.values()))                # DISPLAY CODE
     while queue:
-        Xstar, Ci = queue.popleft()
-        original_domain_length = len(Xstar["domain"])
-        revise_star(Xstar, Ci)
-        new_domain_length = len(Xstar["domain"])
-        if new_domain_length < original_domain_length:
+        X, Y = queue.popleft()
+        reduced = revise(X, Y, domains, evaluate_variables)
+        if reduced:
+            new_done_domain_count = len(filter(lambda d: len(d) == 1, domains.values()))    # DISPLAY CODE
+            if new_done_domain_count > done_domain_count:                                   # DISPLAY CODE
+                done_domain_count = new_done_domain_count                                   # DISPLAY CODE
+                print_result(variables, domains)                                            # DISPLAY CODE
             for Ck in constraints:
-                if Ck != Ci:
-                    if Ck["binary"]:
-                        if Ck["variables"][0] != Xstar:
-                            queue.append((Ck["variables"][0], Ck))
-                        if Ck["variables"][1] != Xstar:
-                            queue.append((Ck["variables"][1], Ck))
-                    else:
-                        for v in Ck["variables"][0]:
-                            if v != Xstar:
-                                queue.append((v, Ck))
-                        for v in Ck["variables"][1]:
-                            if v != Xstar:
-                                queue.append((v, Ck))
+                if X == Ck[1]:
+                    queue.append(Ck)
+
+# Takes a list of variables, dictionary of domains, constrains between
+# the variables and a function that evaluates possible values for two
+# variables.
+def solve(variables, domains, constraints, evaluate_variables):
+    queue = deque([])
+    for c in constraints:
+        queue.append(c)
+
+    domain_filtering_loop(queue, domains, constraints, evaluate_variables)
+
+    if any(map(lambda v: len(domains[v]) > 1, variables)):
+        result = astar((variables, domains, constraints)
+                      , find_successor
+                      , generate_successors
+                      , heuristic
+                      , is_terminal
+                      , hash_function)
+        print_result(result[1][0], result[1][1])
+
+    elif any(map(lambda v: len(domains[v]) == 0, variables)):
+        print "No solution found, got this far: "
+        print_result(variables, domains)
+    else:
+        print_result(variables, domains)
 
 
+'''
+        Launching
+'''
 
-
-
-solve(variables, constraints)
-
-
-print "..."
-
-
-for v in variables:
-    print v["domain"]
+# cProfile.run('solve(variables, domains, constraint_pairs, evaluate_intersection)')
+solve(variables, domains, constraint_pairs, evaluate_intersection)
