@@ -155,6 +155,7 @@ def generate_successors(current):
     successors = []
     # sorted_variables = current[0][:]                              # sort by length of domain
     # sorted_variables.sort(key=lambda v: len(current[1][v]))       # sort by length of domain
+    # sorted_variables.reverse()                                    # sort by length of domain
     for var in current[0]:
         for p in current[1][var]:
             child_domain = deepcopy(current[1])
@@ -247,5 +248,5 @@ def solve(variables, domains, constraints, evaluate_variables):
         Launching
 '''
 
-# cProfile.run('solve(variables, domains, constraint_pairs, evaluate_intersection)')
-solve(variables, domains, constraint_pairs, evaluate_intersection)
+cProfile.run('solve(variables, domains, constraint_pairs, evaluate_intersection)')
+# solve(variables, domains, constraint_pairs, evaluate_intersection)

@@ -15,7 +15,7 @@ from dfs import dfs
 # --------------------------------
 
 #Use pillow to paint a board with some text and a number
-def paintboard(board, iteration):
+def paintboard(board, iteration, final):
     im = Image.new("RGB", (6*50, 7*50), "white")
     draw = ImageDraw.Draw(im)
     y = 0
@@ -40,13 +40,27 @@ def paintboard(board, iteration):
             draw.rectangle([x, y, x+50, y+50], color)
             x = x + deltax
             y = y + deltay
-    text = "Iteration #"+ str(iteration)
+    if final:
+        text = "Move #"+ str(iteration)
+    else:
+        text = "Expansion #"+ str(iteration)
     draw.text((10, 310), text,(0,0,0))
-    im.save("output/" + str(iteration) + ".png")
+    if final:
+        im.save("output/" + str(iteration) + ".png")
+    else:
+        im.save("expansion/" + str(iteration) + ".png")
 
 #Deletes the output of previous run
 def delete_previous_output():
     folder = 'output'
+    for img in os.listdir(folder):
+        img_path = os.path.join(folder, img)
+        try:
+            if os.path.isfile(img_path):
+                os.unlink(img_path)
+        except Exception as e:
+            print(e)
+    folder = 'expansion'
     for img in os.listdir(folder):
         img_path = os.path.join(folder, img)
         try:
