@@ -15,7 +15,7 @@ def backtrack(node, parent, display_function, hash_function):
     if display_function is not None:
         counter = 1
         for board in history:
-            display_function(board, counter)
+            display_function(board, counter, True)
             counter = counter + 1
 
 #Generic A* code
@@ -34,8 +34,14 @@ def astar(
     # parent and costs maps with the hashed boards
     parent = {}
     cost = {hash_function(board): 0}
+    counter = 0
     while open_set:
+        counter += 1
         current = find_successor(open_set, cost, heuristic)
+        # save a picture of each selected node
+        if display is not None:
+            display(current, counter, False)
+
         if is_terminal(current):
             print "-"*80
             print "Heuristic:      " + heuristic.__name__.replace("_"," ").title()
