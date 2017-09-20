@@ -47,7 +47,7 @@ def astar(
             print "--------------------"
             backtrack(current, parent, display, hash_function)
             print "-"*80
-            return True
+            return (True, current)
         open_set.remove(current)
         closed_set.add(hash_function(current))
         for neighbour in generate_successors(current):
@@ -61,4 +61,4 @@ def astar(
                 continue
             parent[hash_function(neighbour)] = current
             cost[hash_function(neighbour)] = tentative_score
-    return False
+    return (False, None)
